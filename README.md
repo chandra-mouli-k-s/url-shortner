@@ -1,2 +1,2 @@
-# url-shortner-chandra
+# url-shortner
 url-shortner
