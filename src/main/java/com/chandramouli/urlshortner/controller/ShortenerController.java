@@ -8,10 +8,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.DigestUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+import org.springframework.web.servlet.view.RedirectView;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @RequestMapping("/")
 @RestController
@@ -24,28 +27,58 @@ public class ShortenerController {
     @GetMapping(value = "/shorten")
     @ResponseBody
     public Link shortenTheLink(@RequestParam(value = "url") String url) throws Exception {
-        if (UrlValidator.getInstance().isValid(url)) {
-            String shortUrl = DigestUtils.md5DigestAsHex(url.getBytes(StandardCharsets.UTF_8));
-            final String baseUrl = ServletUriComponentsBuilder.fromCurrentContextPath().build().toUriString();
-            linkRepo.save(new Link(shortUrl, url));
-            return new Link(baseUrl + "/" + shortUrl, url);
-        } else throw new Exception("Invalid URL");
+        log.debug("Inside shortenTheLink method");
+        try {
+            if (UrlValidator.getInstance().isValid(url)) {
+                log.info("User entered a valid URL: " + url);
+                String shortUrl = DigestUtils.md5DigestAsHex(url.getBytes(StandardCharsets.UTF_8));
+                String reUsedLink = getIfAlreadyShortened(shortUrl);
+                final String baseUrl = ServletUriComponentsBuilder.fromCurrentContextPath().build().toUriString();
+                if (reUsedLink == null) {
+                    log.debug("This is a new URL to be shortened");
+                    linkRepo.save(new Link(shortUrl, url));
+                    log.info("Saved the shortened URL in the backend");
+                }
+                return new Link(baseUrl + "/" + shortUrl, url);
+            } else throw new Exception("Invalid URL");
+        } catch (Exception ex) {
+            log.error("Exception occurred while shortening the URL", ex);
+            throw ex;
+        }
     }
 
     @GetMapping(value = "/{shortLink}")
     @ResponseBody
-    public String getFullUrl(@PathVariable String shortLink) throws Exception {
-        Optional<Link> link = linkRepo.findById(shortLink);
-        if (link.isPresent())
-            return link.get().getActualUrl();
-        else
-            throw new Exception("No Such shortened URL exists");
+    public RedirectView getFullUrl(@PathVariable String shortLink) throws Exception {
+        log.debug("Inside getFullUrl method");
+        try {
+            String actualUrl = getIfAlreadyShortened(shortLink);
+            if (actualUrl != null) {
+                log.info("Shortened URL found: {}", actualUrl);
+                RedirectView view = new RedirectView();
+                view.setUrl(actualUrl);
+                return view;
+            } else throw new Exception("Invalid shortened URL link");
+        } catch (Exception ex) {
+            log.error("Exception occurred while retrieving a shortened URL", ex);
+            throw ex;
+        }
+    }
+
+    private String getIfAlreadyShortened(String id) {
+        Optional<Link> optionalLink = linkRepo.findById(id);
+        log.info("Finding if short URL exists for {}", id);
+        return optionalLink.map(Link::getActualUrl).orElse(null);
     }
 
     @GetMapping(value = "/test")
     @ResponseBody
     public List<Link> test() {
-        log.info("entered the code base");
+        List<String> dummyData = Arrays.asList("https://www.youtube.com/watch?v=3ltcxsBiHZ8",
+                "https://www.youtube.com/watch?v=IjMESxJdWkg", "https://www.youtube.com/watch?v=Okhd_ijkI6k",
+                "https://www.youtube.com/watch?v=aICaAEXDJQQ", "https://www.youtube.com/watch?v=fVeD9vWCpZ8"
+        );
+        linkRepo.saveAll(dummyData.stream().map(url -> new Link(DigestUtils.md5DigestAsHex(url.getBytes(StandardCharsets.UTF_8)), url)).collect(Collectors.toList()));
         return linkRepo.findAll();
     }
 
