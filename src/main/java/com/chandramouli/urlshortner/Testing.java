@@ -1,9 +1,6 @@
 package com.chandramouli.urlshortner;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 public class Testing {
 
@@ -16,7 +13,7 @@ public class Testing {
 //    Output: 2 3
 
     public static void main(String[] args) {
-        System.out.println(findDuplicates(Arrays.asList(2,3,1,2,3)));//
+        System.out.println(isPalindromePossible("qwewqw".toCharArray()));//
     }
 
     public static List<Integer> findLeader1(List<Integer> intList) {
@@ -48,6 +45,22 @@ public class Testing {
         }
         return toReturn;
     }
+
+    public static boolean isPalindromePossible(char[] arr) {
+        Map<String, Integer> counter = new HashMap<>();
+        for (char c : arr) {
+            String character = String.valueOf(c);
+            counter.put(character, counter.getOrDefault(character, 0) + 1);
+        }
+        int checkCount = 0;
+        for(Integer each : counter.values()) {
+            checkCount += each % 2;
+        }
+        System.out.println(counter);
+        return checkCount <= 1;
+    }
+
+    //JWT - protocols FTP etc chown - group of permissions in UNIX | SOLID | design patterns | JS | closure | async promises | data normalization | rebase GIT |
 
 //    public static List<Integer> findLeader2(List<Integer> intList) {
 //        List<Integer> leaders = new ArrayList<>(intList);
